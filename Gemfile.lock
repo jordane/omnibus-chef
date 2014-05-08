@@ -14,7 +14,7 @@ GIT
 
 GIT
   remote: git://github.com/opscode/omnibus-software.git
-  revision: 9ffe654ec478e7f61256c8a6035069e206bbb063
+  revision: 5a6b01cb9d08a3631fa435bce418395b59b1b941
   branch: lcg/ffi-yajl-gem
   specs:
     omnibus-software (0.0.1)
