@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+set -e
+
+source $WORKSPACE/opscode-ci-scripts/load-omnibus-toolchain.sh
+
+export OMNIBUS_PROJECT_NAME=$1
+
+if [ "$CLEAN" = "true" ]; then
+  sudo rm -rf /var/cache/omnibus || true
+fi
+
+sudo rm -rf "/opt/${OMNIBUS_PROJECT_NAME}" || true
+sudo rm -rf /var/cache/omnibus/pkg || true
+sudo rm -f pkg/* || true
+sudo rm -rf /tmp/.cpan || true
+
+# create required build dirs and set ownership
+for BUILD_DIR in "/opt/${OMNIBUS_PROJECT_NAME}" /var/cache/omnibus
+do
+  sudo mkdir -p $BUILD_DIR
+  sudo chown $(whoami) $BUILD_DIR
+done
+
+# copy config into place
+cp omnibus.rb.example omnibus.rb
+
+bundle install --deployment
+
+if [ "$RELEASE_BUILD" = "true" ]; then
+  bundle exec omnibus build project "$1" --no-timestamp
+else
+  bundle exec omnibus build project "$1"
+fi
+
+# Sign the package on some platforms:
+if command -v rpm; then
+  HOME=/home/jenkins $WORKSPACE/opscode-ci-scripts/sign-rpm "foo" $(pwd)/pkg/*rpm
+fi
+
+# Dump the build-generated version so the Omnitruck release script uses the
+# correct version string format.
+echo "`awk -v p=$OMNIBUS_PROJECT_NAME '$1 == p {print $2}' /opt/$OMNIBUS_PROJECT_NAME/version-manifest.txt | head -n 1`" > pkg/BUILD_VERSION
